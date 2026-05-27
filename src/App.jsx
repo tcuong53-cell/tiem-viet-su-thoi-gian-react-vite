@@ -97,16 +97,34 @@ const initialGame = {
 function loadGame() {
   try {
     const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
-    return saved
-      ? {
-          ...initialGame,
-          ...saved,
-          products: { ...initialGame.products, ...saved.products },
-          upgrades: { ...initialGame.upgrades, ...saved.upgrades },
-          achievements: saved.achievements || initialGame.achievements,
-          log: saved.log || initialGame.log,
-        }
-      : initialGame;
+    if (!saved) return initialGame;
+
+    // Deep merge products to avoid missing properties (shelf, price, stock)
+    const mergedProducts = {};
+    productCatalog.forEach((item) => {
+      const initialProd = initialGame.products[item.id];
+      const savedProd = saved.products ? saved.products[item.id] : null;
+      mergedProducts[item.id] = savedProd
+        ? { ...initialProd, ...savedProd }
+        : initialProd;
+    });
+
+    // Deep merge upgrades
+    const mergedUpgrades = {};
+    Object.keys(initialGame.upgrades).forEach((key) => {
+      mergedUpgrades[key] = saved.upgrades && saved.upgrades[key] !== undefined
+        ? saved.upgrades[key]
+        : initialGame.upgrades[key];
+    });
+
+    return {
+      ...initialGame,
+      ...saved,
+      products: mergedProducts,
+      upgrades: mergedUpgrades,
+      achievements: saved.achievements || initialGame.achievements,
+      log: saved.log || initialGame.log,
+    };
   } catch {
     return initialGame;
   }
